@@ -177,7 +177,7 @@ LRESULT CALLBACK WndProc (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 		case IDM_APP_ABOUT:
 			MessageBox(hwnd,
-			 TEXT("第二次上机练习\n图标、菜单、加速键、消息框\n\n学号：10112130261\n姓名：杨利民"),
+			 TEXT("第二次上机练习\n图标、菜单、加速键、消息框\n\n学号：***\n姓名：***),
 			 TEXT("lab2"),MB_ICONINFORMATION);
 			return 0;
 		}

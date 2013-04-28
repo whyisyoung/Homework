@@ -107,7 +107,7 @@ class MyFrame(wx.Frame):
 		self.Refresh()
 
 	def OnHelp( self, evt ):
-		wx.MessageBox( u"第二次上机练习\n\n杨利民\n10112130261",
+		wx.MessageBox( u"第二次上机练习\n\nname:***\nnumber:***",
 			 "lab2", wx.OK | wx.ICON_INFORMATION, self )
 
 	def OnClose( self, evt ):
