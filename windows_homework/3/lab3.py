@@ -65,7 +65,7 @@ class MyFrame( wx.Frame ):
 
 	def OnFileDialog( self, evt ):
 		wildcard = "All fils(*.*)|*.*|" \
-					"Python source(*.py)|.*py|" \
+					"Python source(*.py)|*.py|" \
 					"C++ source(*.cpp)|*.cpp"
 		fileDlg = wx.FileDialog( None, "Choose a file", os.getcwd(), "", wildcard, wx.OPEN )
 		if fileDlg.ShowModal() == wx.ID_OK:
