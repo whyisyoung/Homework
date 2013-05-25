@@ -1,25 +1,9 @@
 # coding: utf-8
 """ 
-	this application is to show and save words in a picture with an 
-	open source OCR project:tesseract, you may also enhance the picture 
-	to make it easier to identify, enjoy it!
-	coding by: whyisyoung 
-
-	Notice:
-	You can not open an image whose path is without Chinese name, 
-	it will give u an error in Line 57. 
-
-	my little finding: 
-	1. you'd better not use DrawBitmap with ClientDC,
-	it may got u many unexpected error when showing pictures.
-	2. when comes to save file, u need to add wx.OVERWRITE_PROMPT 
-	style to your dialog.
-	3. when you want to write Chinese character to file, u need to use 
-	string.encode("gbk"), also when you want to print unicode and string
-	,change unicode.encode('gbk') first
-	4. when encoding with UTF-8 without BOM, u should use u"Chinese" everywhere
-
 	tips:
+	If you want to know more about this program,
+	please read README.md.
+
 	You can also see my code in 
 	https://github.com/linus-young/ylm/blob/master/windows_homework/4
 """
@@ -32,7 +16,7 @@ import os
 from pytesser import *
 import wx.lib.imagebrowser as imagebrowser
 import Image
-import util
+
 
 class MyFrame( wx.Frame ):
 	def __init__( self ):
@@ -79,7 +63,8 @@ class MyFrame( wx.Frame ):
 		openImageDialog = imagebrowser.ImageDialog( None )
 		if openImageDialog.ShowModal() == wx.ID_OK:
 			self.imageName = openImageDialog.GetFile()
-			self.showImageName.SetLabel( u"图像文件：".encode('gbk')+self.imageName ) 
+			self.showImageName.SetLabel( u"图像文件：".encode('gbk')+self.imageName )
+			#self.showImageName.SetLabel( u"图像文件："+self.imageName ) #use this in linux
 			# BITTYPE_TYPE_ANY will auto detect the picture's type
 			self.image = Image.open( self.imageName )
 			self.imageOfBitmap = wx.Image( name=self.imageName, type=wx.BITMAP_TYPE_ANY ).ConvertToBitmap()
@@ -98,8 +83,7 @@ class MyFrame( wx.Frame ):
  
 	def OnSaveFile( self, evt ):
 		""" You can save the outputs in a txt file"""
-		wildcard = "Text Files(*.txt)|*.txt|" \
-				   "All files(*.*)|*.*"
+		wildcard = "Text Files (*.txt)|*.txt|All files (*.*)|*.*"
 		# remember to use wx.OVERWRITE_PROMPT style when write to an exist file
 		saveDlg = wx.FileDialog( None, "Save textfile as...", os.getcwd(), "", \
 								wildcard, wx.SAVE | wx.OVERWRITE_PROMPT )
@@ -122,38 +106,44 @@ class MyFrame( wx.Frame ):
 		self.Close()
 
 	def OnOcrPicture( self, evt ):
-		langId = evt.GetId()
-		self.ocrStatus.SetLabel( u"正在识别中，请等待..." )
-		if langId == 201:
-			self.text = unicode( image_to_string( self.image, lang="eng" ), "utf-8")
+		if self.image:
+			langId = evt.GetId()
+			self.ocrStatus.SetLabel( u"正在识别中，请等待..." )
+			if langId == 201:
+				self.text = unicode( image_to_string( self.image, lang="eng" ), "utf-8")
+			else:
+				self.text = unicode( image_to_string( self.image, lang="chi_sim"), "utf-8" )
+				print(type(self.text))
+			wx.MessageBox( self.text, "TEXT", wx.ICON_INFORMATION, self )
+			self.ocrStatus.SetLabel("")
+			self.menuBar.Enable( 102, True )
 		else:
-			self.text = unicode( image_to_string( self.image, lang="chi_sim"), "utf-8" )
-			print(type(self.text))
-		wx.MessageBox( self.text, "TEXT", wx.ICON_INFORMATION, self )
-		self.ocrStatus.SetLabel("")
-		self.menuBar.Enable( 102, True )
+			wx.MessageBox( u"没有打开的图像文件", "ERROR", wx.OK, self )
 
 	def OnPicEnhance( self, evt ):
 		""" if the words on the picture is not clear enough, 
 			you can use this method to enhance it to make it 
 			more clear to identify easily """
-		wildcard = "Bitmap files(*.bmp)|*.bmp|" \
-				   "All files(*.*)|*.*"
-		saveImageDlg = wx.FileDialog( None, "Save Image file as...", os.getcwd(), "", \
-								 wildcard, wx.SAVE | wx.OVERWRITE_PROMPT ) 
-		if saveImageDlg.ShowModal() == wx.ID_OK:
-			fullImageName = saveImageDlg.GetPath()
-			savedImageName = saveImageDlg.GetFilename()
-			savedImage = open( fullImageName, "w")
-			util.image_to_scratch( self.image, savedImageName )
-			self.showImageName.SetLabel( fullImageName )
-			self.enhanceStatus.SetLabel(  u"正在增强图像中，请等待..." )
-			self.image = Image.open( fullImageName )
-			self.imageOfBitmap = wx.Image( name=fullImageName, type=wx.BITMAP_TYPE_ANY ).ConvertToBitmap()
-			self.Refresh()
-			self.enhanceStatus.SetLabel("")
-			savedImage.close()
-		saveImageDlg.Destroy()
+		if self.image:
+			wildcard = "PNG files (*.png)|*.png|All files (*.*)|*.*" # .tiff can not show in windows.
+				   
+			saveImageDlg = wx.FileDialog( None, "Save Image file as...", os.getcwd(), "", \
+									 wildcard, wx.SAVE | wx.OVERWRITE_PROMPT ) 
+			if saveImageDlg.ShowModal() == wx.ID_OK:
+				fullImageName = saveImageDlg.GetPath()
+				call_imagemagick( self.imageName, fullImageName )
+				print fullImageName
+				fullImageName = fullImageName
+				#self.image.save( fullImageName )//this is wrong, you should not open a file and try to write it and save it.
+				self.showImageName.SetLabel( fullImageName )
+				self.enhanceStatus.SetLabel(  u"正在增强图像中，请等待..." )
+				self.image = Image.open( fullImageName )
+				self.imageOfBitmap = wx.Image( name=fullImageName, type=wx.BITMAP_TYPE_ANY ).ConvertToBitmap()
+				self.Refresh()
+				self.enhanceStatus.SetLabel("")
+			saveImageDlg.Destroy()
+		else:
+			wx.MessageBox( u"尚未装入图像文件", "ERROR", wx.OK, self )
 
 
 	def OnAbout( self, evt ):
