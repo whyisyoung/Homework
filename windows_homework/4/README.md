@@ -7,6 +7,7 @@ to make it easier to identify, enjoy it!
 
 ## Notice:
 请不要在中文目录下运行（图像增强功能将无法使用）
+    
 In Ubuntu, you need make some preparations first:
 
     sudo apt-get install tesseract-ocr

@@ -52,7 +52,6 @@ class MyFrame( wx.Frame ):
 		self.enhanceStatus.SetFont( font )
 
 	def OnPaint( self, evt ):
-		# todo
 		dc = wx.PaintDC( self )
 		if self.bPicShow == True:
 			dc.DrawBitmap( self.imageOfBitmap, 10, 80 )
@@ -72,7 +71,7 @@ class MyFrame( wx.Frame ):
 			self.Refresh()
 		elif openImageDialog.ShowModal() == wx.ID_CANCEL:
 			# keep last status
-			print "you canceled to choose a image"
+			print "you canceled to choose an image"
 		else:
 			wx.MessageBox( "ERROR",u"图像文件不正确", wx.ICON_INFORMATION, self )
 			self.showImageName.SetLabel( u"图像文件：None")
