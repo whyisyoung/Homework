@@ -1,4 +1,4 @@
-# coding: utf-8
+﻿# coding: utf-8
 
 import wx
 import constant as const
@@ -30,9 +30,3 @@ def BuildMenuBar():
 	menuBar.Append( aboutMenu, u"关于(&A)" )
 
 	return menuBar 	
-
-def ImageToPil( myWxImage ):
-	"""Convert wx.Image to PIL Image """
-	myPilImage = Image.new( 'RGB', (myWxImage.GetWidth(), myWxImage.GetHeight()) )
-	myPilImage.fromstring( myWxImage.GetData() )
-	return myPilImage

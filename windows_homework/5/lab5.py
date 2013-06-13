@@ -2,26 +2,33 @@
 """
 	This application is just like snipppingTool in Windows,
 	function:
-		1.save a selected area to an image
+		1.save a selected area( using rectangle ) to an image
 		   (include this program window or not )
 		2.resize an image
-		3.snip the whole screen 
+		3.snip the whole screen (include this program window or not )
+
+	rework:
+		todo:
+			write a shared function for SnipPart and SnipAll function,
 """
 
 import wx
 import os,sys,platform
-import Image
 import wx.lib.imagebrowser as imagebrowser
-import shutil
+import time
 
 import util
 import constant as const
 import select_area_dialog
 
-if os.name == 'nt': # for Windows, actually, you can also use ImageMagick
-	import ImageGrab
-else: #Assume Linux/GTK
-	from config import launchCommand
+"""
+	the following code maybe a solution, but it's not 
+	so good for cross-platform
+"""
+#if os.name == 'nt': # for Windows, actually, you can also use ImageMagick
+#	import ImageGrab
+#else: #Assume Linux/GTK
+#	from config import launchCommand
 
 class SnippingTool( wx.Frame ):
 	def __init__( self ):
@@ -42,30 +49,29 @@ class SnippingTool( wx.Frame ):
 		self.Bind( wx.EVT_MENU, self.ResizeImg,   id =const.ID_IMAGE_RESIZE )
 		self.Bind( wx.EVT_MENU, self.HideOption,  id =const.ID_HIDE_CURRENT )
 		self.Bind( wx.EVT_MENU, self.AboutApp,    id =const.ID_APP_ABOUT )
+		self.Bind( wx.EVT_CLOSE, self.CloseApp )
 
 		self.Bind( wx.EVT_MOTION, self.OnMouseMove )
 		self.Bind( wx.EVT_LEFT_DOWN, self.OnMouseLeftDown )
 		self.Bind( wx.EVT_LEFT_UP, self.OnMouseLeftUp )
 		self.Bind( wx.EVT_PAINT, self.OnPaint )
 
-		
-		self.imageName = None
-		self.image = None # PIL Image, it has size attribute
-		self.imageOfBitmap = None # wx.Bitmap image, it can be painted by DrawBitmap function
+		self.imageOfBitmap = None # # current image showed in window
 		self.startPoint = self.endPoint = None
 		self.bResize = False # whether select ResizeImage menu or not
 		self.resizeEnd = None 
-		self.bHideCurrent = False
-		self.isSaved = None
+		self.bHideCurrent = False # whether select "hide current window menu " or not
+		self.isSaved = None # whether the result has saved or not
+		 
 
 
 	def OpenImgFile( self, evt ):
 		openImageDialog = imagebrowser.ImageDialog( None )
 		if openImageDialog.ShowModal() == wx.ID_OK:
-			self.imageName = openImageDialog.GetFile()
-			self.image = Image.open( self.imageName )
-			self.imageOfBitmap = wx.Image( name=self.imageName, type=wx.BITMAP_TYPE_ANY ).ConvertToBitmap()
-			self.SetClientSizeWH( self.image.size[0]+200, self.image.size[1]+100 )
+			fileName = openImageDialog.GetFile()
+			self.imageOfBitmap = wx.Image( name=fileName, type=wx.BITMAP_TYPE_ANY ).ConvertToBitmap()
+			size = self.imageOfBitmap.GetSize()
+			self.SetClientSizeWH( size[0]+200, size[1]+100 )
 			self.Refresh()
 		elif openImageDialog.ShowModal() == wx.ID_CANCEL:
 			print "you canceled to choose an image"
@@ -81,15 +87,8 @@ class SnippingTool( wx.Frame ):
 		saveDlg = wx.FileDialog( None, "Save Image as...", os.getcwd(), "", \
 								wildcard, wx.SAVE | wx.OVERWRITE_PROMPT )
 		if saveDlg.ShowModal() == wx.ID_OK:
-			fullFileName = saveDlg.GetPath()
 			fileName = saveDlg.GetFilename()
-			area = wx.ClientDC( self )
-			size = self.image.size
-			newImage = wx.EmptyBitmap( size[0], size[1] )
-			mem = wx.MemoryDC( newImage )
-			mem.Blit( 0, 0, size[0], size[1], area, 0, 0 )
-			del mem
-			newImage.SaveFile( name=fileName, type=wx.BITMAP_TYPE_BMP )# do not use ANY here
+			self.imageOfBitmap.SaveFile( name=fileName, type=wx.BITMAP_TYPE_BMP )# do not use ANY here
 			self.menuBar.Enable( const.ID_FILE_SAVE, False )
 			self.isSaved = True
 		else:
@@ -102,16 +101,20 @@ class SnippingTool( wx.Frame ):
 			dlg = wx.MessageDialog( self, u"结果尚未保存，确定要关闭？", "warning",
 						 wx.YES_NO | wx.ICON_QUESTION  )
 			if dlg.ShowModal() == wx.ID_YES:
-				self.Close()
+				self.Destroy()
+			else:
+				wildcard= "BMP Files (*.bmp)|*.bmp|All Files(*.*)|*.*"
+				saveDlg = wx.FileDialog( None, "Save Image as...", os.getcwd(), "", \
+								wildcard, wx.SAVE | wx.OVERWRITE_PROMPT )
+				if saveDlg.ShowModal() == wx.ID_OK:
+					fileName = saveDlg.GetFilename()
+					self.imageOfBitmap.SaveFile( name=fileName, type=wx.BITMAP_TYPE_BMP )
+					self.Destroy()
+		
 		else:
-			self.Close()
-
+			self.Destroy()
 
 	def SnipPart( self, evt ):
-		"""
-		todo:
-			create a temp file to hold screencapture
-		"""
 		self.bResize = False
 		if self.bHideCurrent:
 			self.Iconize( True )# minimize current window
@@ -125,43 +128,41 @@ class SnippingTool( wx.Frame ):
 			rect = wx.RectPP( self.startPoint, self.endPoint )
 			scrDC = wx.ScreenDC( )
 			if rect:
-				bmp = wx.EmptyBitmap( rect.size[0], rect.size[1] )
-				mem = wx.MemoryDC( bmp )
+				self.imageOfBitmap = wx.EmptyBitmap( rect.size[0], rect.size[1] )
+				mem = wx.MemoryDC( self.imageOfBitmap )
 				mem.Blit( 0, 0, rect.size[0], rect.size[1], scrDC, rect.GetX(), rect.GetY() )
 				del mem
-				bmp.SaveFile( 'bug.bmp', wx.BITMAP_TYPE_BMP )
-				self.imageName = 'bug.bmp'
-				self.image = Image.open('bug.bmp')
-				self.imageOfBitmap = wx.Image( name="bug.bmp", type=wx.BITMAP_TYPE_ANY ).ConvertToBitmap()
 				self.SetClientSizeWH( rect.size[0]+200, rect.size[1]+100)
 				self.Refresh()
 				self.Iconize( False ) # restore app window
 				self.isSaved = False
+				self.menuBar.Enable( const.ID_FILE_SAVE, True )
 		else:
 			self.Iconize( False )
 
 	def SnipAll( self, evt ):
-		"""
-		todo:
-			create a temp file to hold screencapture
-		"""
+		if self.bHideCurrent:
+			self.Show( False )
+			time.sleep( 0.2 ) # 0.2 seconds
+		else:
+			self.Show( True )
 		screen = wx.ScreenDC()
 		size = screen.GetSize()
-		bmp = wx.EmptyBitmap(size[0], size[1])
-		mem = wx.MemoryDC( bmp )
+		self.imageOfBitmap = wx.EmptyBitmap(size[0], size[1])
+		mem = wx.MemoryDC( self.imageOfBitmap )
 		mem.Blit(0, 0, size[0], size[1], screen, 0, 0)
 		del mem  # Release bitmap
-		bmp.SaveFile( 'temp.bmp', wx.BITMAP_TYPE_BMP )
-		self.imageName = "temp.bmp"
-		self.image = Image.open( 'temp.bmp' )
-		self.imageOfBitmap = wx.Image( name="temp.bmp", type=wx.BITMAP_TYPE_ANY ).ConvertToBitmap()
-		self.SetClientSize( self.image.size )
+		self.SetClientSize( size )
 		self.Refresh()
+		self.Show( True )
 		self.bResize = False
 		self.menuBar.Enable( const.ID_FILE_SAVE, True )
 		self.isSaved = False
 
-		"""the following code is also useful"""
+		"""
+			the following code maybe also useful, but I do not know which Linux launchCommand suits, 
+			at least in KUbuntu 13.04, I didn't find it. If you knows, please contact me :)
+		"""
 		#if platform.system() == 'Windows':
 		#	self.image = ImageGrab.grab()
 		#	self.image.save('temp.bmp')
@@ -175,16 +176,15 @@ class SnippingTool( wx.Frame ):
 		windowSize = self.GetClientSize()
 		width, height = windowSize[0], windowSize[1]
 		if self.imageOfBitmap:
-			wxImage = wx.Image( name=self.imageName, type=wx.BITMAP_TYPE_ANY )
+			wxImage = self.imageOfBitmap.ConvertToImage()
 			wxImage = wxImage.Scale( width, height, wx.IMAGE_QUALITY_HIGH )
-			self.image = util.ImageToPil( wxImage )
 			self.imageOfBitmap = wxImage.ConvertToBitmap()
 			self.Refresh()
 			self.menuBar.Enable( const.ID_FILE_SAVE, True )
 			self.isSaved = False
 
 	def ResizeImg( self, evt ):
-		if self.image:
+		if self.imageOfBitmap:
 			self.bResize = True
 		else:
 			wx.MessageBox( u"没有载入图像文件", "ERROR", wx.OK, self )
@@ -205,9 +205,9 @@ class SnippingTool( wx.Frame ):
 			self.SetCursor( wx.StockCursor(wx.CURSOR_CROSS) )
 			self.resizeEnd = evt.GetPosition()
 			width, height = self.resizeEnd.x, self.resizeEnd.y
-			wxImage = wx.Image( name=self.imageName, type=wx.BITMAP_TYPE_ANY )
+			wxImage = self.imageOfBitmap.ConvertToImage()
 			wxImage = wxImage.Scale( width, height, wx.IMAGE_QUALITY_HIGH )
-			self.image = util.ImageToPil( wxImage )
+
 			self.imageOfBitmap = wxImage.ConvertToBitmap()
 			self.Refresh()
 			self.menuBar.Enable( const.ID_FILE_SAVE, True )
@@ -226,10 +226,9 @@ class SnippingTool( wx.Frame ):
 		if evt.LeftIsDown() and self.bResize:
 			self.resizeEnd = evt.GetPosition()
 			width, height = self.resizeEnd.x, self.resizeEnd.y
-			wxImage = wx.Image( name=self.imageName, type=wx.BITMAP_TYPE_ANY )
+			wxImage = self.imageOfBitmap.ConvertToImage()
 			"""change Image size while mouse moving, use wx.Image method Scale"""
 			wxImage = wxImage.Scale( width, height, wx.IMAGE_QUALITY_HIGH )
-			self.image = util.ImageToPil( wxImage )
 			self.imageOfBitmap = wxImage.ConvertToBitmap()
 			self.Refresh()
 			self.menuBar.Enable( const.ID_FILE_SAVE, True )
