@@ -170,7 +170,7 @@ LRESULT CALLBACK WndProc( HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam 
 
 		case ID_ABOUT:
 			MessageBox( hwnd, 
-				TEXT("第三次上机练习\n对话框、光标、字符串、位图\n\n学号：***\n姓名：***),
+				TEXT("第三次上机练习\n对话框、光标、字符串、位图\n\n学号：***\n姓名：***"),
 				TEXT("lab3"), MB_ICONINFORMATION );
 			return 0;
 		}

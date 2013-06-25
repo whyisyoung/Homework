@@ -2,7 +2,6 @@
 
 import wx
 import constant as const
-import Image
 
 def BuildMenuBar():
 	menuBar = wx.MenuBar()

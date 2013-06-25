@@ -22,8 +22,8 @@ import constant as const
 import select_area_dialog
 
 """
-	the following code maybe a solution, but it's not 
-	so good for cross-platform
+	the following code maybe a solution, but it's not
+	so good for cross-platform.
 """
 #if os.name == 'nt': # for Windows, actually, you can also use ImageMagick
 #	import ImageGrab
@@ -59,10 +59,10 @@ class SnippingTool( wx.Frame ):
 		self.imageOfBitmap = None # # current image showed in window
 		self.startPoint = self.endPoint = None
 		self.bResize = False # whether select ResizeImage menu or not
-		self.resizeEnd = None 
+		self.resizeEnd = None
 		self.bHideCurrent = False # whether select "hide current window menu " or not
 		self.isSaved = None # whether the result has saved or not
-		 
+
 
 
 	def OpenImgFile( self, evt ):
@@ -110,7 +110,7 @@ class SnippingTool( wx.Frame ):
 					fileName = saveDlg.GetFilename()
 					self.imageOfBitmap.SaveFile( name=fileName, type=wx.BITMAP_TYPE_BMP )
 					self.Destroy()
-		
+
 		else:
 			self.Destroy()
 
@@ -160,7 +160,7 @@ class SnippingTool( wx.Frame ):
 		self.isSaved = False
 
 		"""
-			the following code maybe also useful, but I do not know which Linux launchCommand suits, 
+			the following code maybe also useful, but I do not know which Linux launchCommand suits,
 			at least in KUbuntu 13.04, I didn't find it. If you knows, please contact me :)
 		"""
 		#if platform.system() == 'Windows':
@@ -189,7 +189,7 @@ class SnippingTool( wx.Frame ):
 		else:
 			wx.MessageBox( u"没有载入图像文件", "ERROR", wx.OK, self )
 			self.bResize = False
-	
+
 
 	def HideOption( self, evt ):
 		self.bResize = False
