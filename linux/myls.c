@@ -14,31 +14,32 @@
  *
  * myls supports the following command-line arguments:
  * -t - sort by modification time
- * -p - sort by type
- * -a - do not hide entries starting with .
+ * -r - reverse output
+ * -a - do not hide entries starting with "."
  * -R - list subdirectories recursively
  * -l - use a long listing format
 */
 
 #define SORT_BY_MTIME (1<<0) /* -t */
-#define SORT_BY_TYPE  (1<<1) /* -p */
+#define REVERSE       (1<<1) /* -r */
 #define ALL           (1<<2) /* -a */
 #define RECURSIVE     (1<<3) /* -R */
 #define DETAIL        (1<<4) /* -l */
 #define MAX_FILE_COUNT   1024
-#define MAX_FILENAME_LEN 80
-#define MAX_PATH_LEN     200
+#define MAX_FILENAME_LEN 200
+#define MAX_PATH_LEN     500
 
 struct FileList {
         char name[MAX_FILENAME_LEN]; /* filename, maybe a subdirectory name */
         struct stat info;            /* file info */
 } file_list[MAX_FILE_COUNT];
 
-static const char *optString = "tpaRl";
+static const char *optString = "traRl";
 
 int  get_file_list(char dirname[], struct FileList *file_list, int mode);
 void lower_case(const char *filename, char *new_name);
 void display(struct FileList *file_list, int count, int mode);
+void reverse_file_list(struct FileList *file_list, int count);
 void display_file_simply(struct FileList *file_list, int count);
 void display_file_detail(struct FileList *file_list, int count);
 void display_file_recursively(struct FileList *file_list, int count, int mode);
@@ -60,7 +61,7 @@ int main(int argc, char *argv[])
         while((opt = getopt(argc, argv, optString)) != -1) {
                 switch(opt) {
                 case 't': mode |= SORT_BY_MTIME; break;
-                case 'p': mode |= SORT_BY_TYPE;  break;
+                case 'r': mode |= REVERSE;       break;
                 case 'a': mode |= ALL;           break;
                 case 'R': mode |= RECURSIVE;     break;
                 case 'l': mode |= DETAIL;        break;
@@ -123,6 +124,9 @@ int get_file_list(char dirname[], struct FileList *file_list, int mode)
                 if(mode & SORT_BY_MTIME)
                         qsort(file_list, count, sizeof(file_list[0]), mtime_cmp);
 
+                if(mode & REVERSE)
+                        reverse_file_list(file_list, count);
+
                 closedir(dir_pointer);
         }
         return count;
@@ -164,7 +168,26 @@ int mtime_cmp(const void *a, const void *b)
         return d->info.st_mtime - c->info.st_mtime; /*compare time is so easy!*/
 }
 
+void reverse_file_list(struct FileList *file_list, int count)
+{
+        int i;
+        char nametmp[MAX_FILENAME_LEN];
+        struct stat infotmp;
+
+        for(i = 0; i < count / 2; ++i) {
+                strcpy(nametmp, file_list[i].name);
+                strcpy(file_list[i].name, file_list[count - i - 1].name);
+                strcpy(file_list[count - i -1].name, nametmp);
+                infotmp = file_list[i].info;
+                file_list[i].info = file_list[count - i - 1].info;
+                file_list[count -i -1].info = infotmp;
+        }
+}
+
 void display(struct FileList *file_list, int count, int mode)
+/*
+ * show file with specified mode(command option).
+ */
 {
         if(mode & RECURSIVE)
                 display_file_recursively(file_list, count, mode);
