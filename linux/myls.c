@@ -27,18 +27,21 @@
 #define DETAIL        (1<<4) /* -l */
 #define MAX_FILE_COUNT   1024
 #define MAX_FILENAME_LEN 80
+#define MAX_PATH_LEN     200
 
 struct FileList {
-        char name[MAX_FILENAME_LEN];
-        struct stat info;
+        char name[MAX_FILENAME_LEN]; /* filename, maybe a subdirectory name */
+        struct stat info;            /* file info */
 } file_list[MAX_FILE_COUNT];
 
 static const char *optString = "tpaRl";
 
 int  get_file_list(char dirname[], struct FileList *file_list, int mode);
-void display_files_of(struct FileList *file_list, int count, int mode);
+void lower_case(const char *filename, char *new_name);
+void display(struct FileList *file_list, int count, int mode);
 void display_file_simply(struct FileList *file_list, int count);
 void display_file_detail(struct FileList *file_list, int count);
+void display_file_recursively(struct FileList *file_list, int count, int mode);
 int  name_cmp(const void *a, const void *b);
 int  mtime_cmp(const void *a, const void *b);
 int  type_cmp(const void *a, const void *b);
@@ -68,14 +71,14 @@ int main(int argc, char *argv[])
 
         if(optind == argc) { /* current directory */
                 file_count = get_file_list(".", &file_list, mode);
-                display_files_of(&file_list, file_count, mode);
+                display(&file_list, file_count, mode);
         }
         else {              /* specify one or more directories */
                 for(i = optind; i < argc; ++i) {
                         if( optind + 1 != argc) /* more than one dir */
                                 printf("%s: \n", argv[i]);
                         file_count = get_file_list(argv[i], &file_list, mode);
-                        display_files_of(&file_list, file_count, mode);
+                        display(&file_list, file_count, mode);
                 }
         }
 
@@ -128,13 +131,26 @@ int get_file_list(char dirname[], struct FileList *file_list, int mode)
 int name_cmp(const void *a, const void *b)
 /*
  *      for qsort with filename.
- *      FIXME: case-sensitive(it's a little bug).
+ *      just like ls --not case-sensitive(it's a little bug).
  */
 {
         struct FileList *c = (struct FileList *) a;
         struct FileList *d = (struct FileList *) b;
+        char cnametmp[MAX_FILENAME_LEN], dnametmp[MAX_FILENAME_LEN];
 
-        return strcmp(c->name, d->name);
+        lower_case(c->name, cnametmp);
+        lower_case(d->name, dnametmp);
+
+        return strcmp(cnametmp, dnametmp);
+}
+
+void lower_case(const char *filename, char *new_name)
+{
+        int len = strlen(filename);
+        int i;
+        for(i = 0; i < len; ++i)
+                new_name[i] = tolower(filename[i]);
+        new_name[len] = '\0';
 }
 
 int mtime_cmp(const void *a, const void *b)
@@ -148,14 +164,71 @@ int mtime_cmp(const void *a, const void *b)
         return d->info.st_mtime - c->info.st_mtime; /*compare time is so easy!*/
 }
 
-void display_files_of(struct FileList *file_list, int count, int mode)
+void display(struct FileList *file_list, int count, int mode)
 {
-        if(mode & DETAIL)
+        if(mode & RECURSIVE)
+                display_file_recursively(file_list, count, mode);
+        else if(mode & DETAIL)
                 display_file_detail(file_list, count);
         else
                 display_file_simply(file_list, count);
 }
 
+void display_file_recursively(struct FileList *file_list, int count, int mode)
+{
+        char path[MAX_PATH_LEN] = { 0 };
+        char temp[MAX_PATH_LEN] = { 0 };
+        char filename[MAX_FILENAME_LEN] = { 0 };
+        struct FileList list[MAX_FILE_COUNT];
+        int i = 0, size = 0;
+
+        puts(get_current_dir_name()); /* absolute path */
+        strcpy(path, get_current_dir_name());
+
+        if(mode & DETAIL)
+                display_file_detail(file_list, count);
+        else
+                display_file_simply(file_list, count);
+        printf("\n");
+
+        for(i = 0; i < count; ++i) {
+                strcpy(filename, file_list[i].name);
+
+                /* "." and ".." is directory, skip them! */
+                if((strcmp(filename, ".") == 0) || (strcmp(filename, "..") == 0))
+                        continue;
+                if(S_ISDIR(file_list[i].info.st_mode)) { /*if a directory*/
+                        strcpy(temp, path);
+                        strcat(path, "/");
+                        strcat(path, filename); /*store absolute path*/
+                        size = get_file_list(path, list, mode);
+                        display_file_recursively(list, size, mode);
+                        strcpy(path, temp);
+                }
+        }
+}
+
+void display_file_detail(struct FileList *file_list, int count)
+{
+        char *uid_to_name(), *ctime(), *gid_to_name(), *filemode();
+        char modestr[11];
+        struct stat *info_p;
+        int i;
+
+        for(i = 0; i < count; ++i) {
+                info_p = &file_list[i].info;
+
+                file_mode_to_string(info_p->st_mode, modestr);
+
+                printf("%s",      modestr);
+                printf("%4d ",    (int)info_p->st_nlink);
+                printf("%-8s ",   uid_to_name(info_p->st_uid));
+                printf("%-8s ",   gid_to_name(info_p->st_gid));
+                printf("%8ld ",   (long)info_p->st_size);
+                printf("%.12s ",  4 + ctime(&info_p->st_mtime));
+                printf("%s\n",    file_list[i].name);
+        }
+}
 
 void display_file_simply(struct FileList *file_list, int count)
 {
@@ -184,28 +257,6 @@ void display_file_simply(struct FileList *file_list, int count)
 }
 
 
-void display_file_detail(struct FileList *file_list, int count)
-{
-        char *uid_to_name(), *ctime(), *gid_to_name(), *filemode();
-        char modestr[11];
-        struct stat *info_p;
-        int i;
-
-        for(i = 0; i < count; ++i) {
-                info_p = &file_list[i].info;
-
-                file_mode_to_string(info_p->st_mode, modestr);
-
-                printf("%s",      modestr);
-                printf("%4d ",    (int)info_p->st_nlink);
-                printf("%-8s ",   uid_to_name(info_p->st_uid));
-                printf("%-8s ",   gid_to_name(info_p->st_gid));
-                printf("%8ld ",   (long)info_p->st_size);
-                printf("%.12s ",  4 + ctime(&info_p->st_mtime));
-                printf("%s\n",    file_list[i].name);
-        }
-}
-
 /* utility functions */
 void file_mode_to_string(int mode, char str[])
 {
@@ -227,6 +278,7 @@ void file_mode_to_string(int mode, char str[])
         if(mode & S_IWOTH) str[8] = 'w';
         if(mode & S_IXOTH) str[9] = 'x';
 }
+
 
 char *uid_to_name(uid_t uid)
 {
