@@ -20,12 +20,13 @@
 #define MAX_PATH_LEN     500
 
 struct FileList {
-        char name[MAX_FILENAME_LEN]; /* filename, maybe a subdirectory name */
-        struct stat info;            /* file info */
+        char name[MAX_FILENAME_LEN]; /* filename, or subdirectory name */
+        struct stat info;            /* file info                      */
 } file_list[MAX_FILE_COUNT];
 
 
 int  get_file_list(char dirname[], struct FileList *file_list, int mode);
+void reverse_file_list(struct FileList *file_list, int count);
 
 /* print functions */
 void display(struct FileList *file_list, int count, int mode);
@@ -33,11 +34,10 @@ void display_file_simply(struct FileList *file_list, int count);
 void display_file_detail(struct FileList *file_list, int count);
 void display_file_recursively(struct FileList *file_list, int count, int mode);
 
-/* compare functions */
+/* compare functions used by qsort() */
 int  name_cmp(const void *a, const void *b);
 void lower_case(const char *filename, char *new_name);
 int  mtime_cmp(const void *a, const void *b);
-void reverse_file_list(struct FileList *file_list, int count);
 
 /* fileinfo help functions */
 void file_mode_to_string(int mode, char str[]);

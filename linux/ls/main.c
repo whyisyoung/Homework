@@ -4,16 +4,24 @@
  * Simple implementation of linux command ls.
  *
  * myls supports the following command-line arguments:
- * -t - sort by modification time
- * -r - reverse output
- * -a - do not hide entries starting with "."
- * -R - list subdirectories recursively
- * -l - use a long listing format
+ *   -t - sort by modification time
+ *   -r - reverse output
+ *   -a - do not hide entries starting with "."
+ *   -R - list subdirectories recursively
+ *   -l - use a long listing format
+ * support mix of these options like -traRl
+ * also support colors to distinguish dir and file :D
 */
 
 static const char *optString = "traRl";
 
 int main(int argc, char *argv[])
+/*
+ * use getopt() to access command option.
+ * you can use multiple options once like:
+ * myls -atlrR
+ * so convenient, just like real ls :)
+ */
 {
         int i;
         int mode = 0;       /* default no parameters */
@@ -65,7 +73,11 @@ int get_file_list(char dirname[], struct FileList *file_list, int mode)
                 exit(EXIT_FAILURE);
         }
         else {
-                chdir(dirname); /* change working directory, or stat will not work well. */
+                /*
+                 * change working directory, as stat() accesss relative path
+                 * more reason can be found here: http://goo.gl/gO1zKd
+                 */
+                chdir(dirname);
 
                 /* collect file name and info */
                 while((dirent_ptr = readdir(dir_pointer)) != NULL) {

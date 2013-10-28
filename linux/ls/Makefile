@@ -1,5 +1,5 @@
 #
-# Makefile of implementation of ls, homework 1
+# Makefile of implementation of ls
 #
 all: myls
 

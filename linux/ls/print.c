@@ -1,8 +1,10 @@
-#include <sys/types.h>
-#include <sys/ioctl.h>
 #include "myls.h"
 
 void display_file_recursively(struct FileList *file_list, int count, int mode)
+/*
+ * display for -R option.
+ * NOTE: for multiple directories, please use absolute path.
+ */
 {
         char path[MAX_PATH_LEN] = { 0 };
         char temp[MAX_PATH_LEN] = { 0 };
@@ -22,7 +24,7 @@ void display_file_recursively(struct FileList *file_list, int count, int mode)
         for(i = 0; i < count; ++i) {
                 strcpy(filename, file_list[i].name);
 
-                /* "." and ".." is directory, skip them! */
+                /* NOTE: "." and ".." is directory, skip them! */
                 if((strcmp(filename, ".") == 0) || (strcmp(filename, "..") == 0))
                         continue;
                 if(S_ISDIR(file_list[i].info.st_mode)) { /*if a directory*/
@@ -37,6 +39,9 @@ void display_file_recursively(struct FileList *file_list, int count, int mode)
 }
 
 void display_file_detail(struct FileList *file_list, int count)
+/*
+ * display for -l option.
+ */
 {
         char *uid_to_name(), *ctime(), *gid_to_name(), *filemode();
         char modestr[11];
@@ -54,11 +59,19 @@ void display_file_detail(struct FileList *file_list, int count)
                 printf("%-8s ",   gid_to_name(info_p->st_gid));
                 printf("%8ld ",   (long)info_p->st_size);
                 printf("%.12s ",  4 + ctime(&info_p->st_mtime));
-                printf("%s\n",    file_list[i].name);
+
+                if(S_ISDIR(file_list[i].info.st_mode)) /* dir   show in blue  */
+                        printf("\e[34m%s", file_list[i].name);
+                else                                   /* other show in green */
+                        printf("\e[92m%s", file_list[i].name);
+                printf("\e[39m\n"); /* default white */
         }
 }
 
 void display_file_simply(struct FileList *file_list, int count)
+/*
+ * display without -R or -l option.
+ */
 {
         struct winsize size;
         int max_name_length = 0, i;
@@ -71,7 +84,7 @@ void display_file_simply(struct FileList *file_list, int count)
                         max_name_length = len;
         }
 
-        /* get terminal size */
+        /* get terminal size with ioctl (2) */
         ioctl(STDOUT_FILENO, TIOCGWINSZ, &size);
         cols = size.ws_col;
         cols /= (max_name_length + 1);
@@ -79,7 +92,17 @@ void display_file_simply(struct FileList *file_list, int count)
         for(i = 0; i < count; ++i) {
                 if(i != 0 && (i % cols == 0))
                         puts(" ");
-                printf("%*s", -(max_name_length + 1), file_list[i].name);
+                /*
+                 * use "%*s": the precision is not specified in the format
+                 * string, but as an additional integer value argument
+                 * preceding the argument that has to be formatted.
+                 */
+                if(S_ISDIR(file_list[i].info.st_mode))
+                        printf("\e[34m%*s", -(max_name_length + 1),
+                                file_list[i].name);
+                else
+                        printf("\e[92m%*s", -(max_name_length + 1),
+                                file_list[i].name);
         }
-        printf("\n");
+        printf("\e[39m\n");
 }
