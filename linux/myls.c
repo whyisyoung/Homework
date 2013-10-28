@@ -18,7 +18,14 @@
  *   -a - do not hide entries starting with "."
  *   -R - list subdirectories recursively
  *   -l - use a long listing format
+ * support mix of these options like -traRl
  * also support colors to distinguish dir and file :D
+ *
+ * NOTICE: 编译时需使用 cc -o myls myls.c -D_GNU_SOURCE,
+ * 因为使用了get_current_dir_name()函数
+ *
+ * FIXME: when comes to a filename very long(maybe >=80)
+ *        it will get a floating point exception :(
 */
 
 #define SORT_BY_MTIME (1<<0) /* -t */
@@ -83,15 +90,17 @@ int main(int argc, char *argv[])
         }
 
         if(optind == argc) { /* current directory */
-                file_count = get_file_list(".", &file_list, mode);
-                display(&file_list, file_count, mode);
+                file_count = get_file_list(".", (struct FileList *)&file_list, mode);
+                display((struct FileList *)&file_list, file_count, mode);
         }
         else {              /* specify one or more directories */
                 for(i = optind; i < argc; ++i) {
                         if( optind + 1 != argc) /* more than one dir */
                                 printf("%s: \n", argv[i]);
-                        file_count = get_file_list(argv[i], &file_list, mode);
-                        display(&file_list, file_count, mode);
+                        file_count = get_file_list(argv[i],
+                                                   (struct FileList *)&file_list,
+                                                   mode);
+                        display((struct FileList *)&file_list, file_count, mode);
                 }
         }
 
