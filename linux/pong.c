@@ -1,6 +1,7 @@
-#include <ncurses.h>
+#include <curses.h>
 #include <signal.h>
 #include <sys/time.h>
+#include <stdlib.h>
 
 
 /* Y axis is row */
@@ -68,8 +69,6 @@ int main()
 	}
 
 	wrap_up();
-
-	return 0;
 }
 
 void init_screen()
@@ -83,6 +82,9 @@ void init_screen()
 	ball.y_dir = 1;
 	ball.x_dir = 1;
 	ball.symbol = BALL_SYMBOL;
+
+	guard_pos = 36;
+	guard_len = 10;
 
 	initscr();
 	raw();
@@ -151,6 +153,7 @@ int bounce_or_lose(struct pong_ball *bp)
 	int bounce = 0;
 	int guard_left = guard_pos;
 	int guard_right = guard_pos + guard_len - 1;
+	char c;
 
 	if(bp->y_pos == TOP_ROW) {
 		/* bounce the top wall and back, y_pos should add one */
@@ -162,8 +165,23 @@ int bounce_or_lose(struct pong_ball *bp)
 		bp->y_dir = -1;
 		bounce = 1;
 	}
-	else if(bp->y_pos == BOT_ROW) /* lose */
-		wrap_up();
+	else if(bp->y_pos == BOT_ROW) { /* lose */
+		set_ticker(0);
+		mvaddstr(13, 30, "You lose!");
+		mvaddstr(14, 30, "Retry?(y/n)");
+		refresh();
+		while((c = getch()) != 'q') {
+			if(c == 'y') {
+				clear();
+				init_screen();
+				break;
+			}
+			else if(c == 'n') {
+				wrap_up();
+				break;
+			}
+		}
+	}
 
 	/*
 	 * bounce the left wall and back, x_pos should add one
@@ -199,9 +217,8 @@ set_ticker(n_msecs)
 void wrap_up()
 {
 	set_ticker(0); /* turn off ticker */
-	mvaddstr(1, 5, "You lose!");
-	refresh();
 	endwin();
+	exit(0);
 }
 
 void move_guard(int dir)
