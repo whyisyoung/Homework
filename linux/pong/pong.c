@@ -6,36 +6,12 @@
 
 int main()
 {
-	int input, dir = 0;
-
 	init();
 
 	play_game();
 
-	while((input = getch()) != 'q') {
-		if(input == 'K')      ball.y_ttm--; /* 增加小球在y轴的移动速度 */
-		else if(input == 'S') ball.y_ttm++; /* 减少小球在y轴的移动速度 */
-		else if(input == 'k') ball.x_ttm--; /* 增加小球在x轴的移动速度 */
-		else if(input == 's') ball.x_ttm++; /* 减少小球在x轴的移动速度 */
-		else if(input == KEY_LEFT) {  /*左移挡板*/
-			dir = -1;
-			move_guard(dir);
-		}
-		else if(input == KEY_RIGHT) { /*右移挡板*/
-			dir = 1;
-			move_guard(dir);
-		}
-		else if(input == KEY_DOWN) {  /* 下键减短挡板长度 */
-			if(--guard_len <= 2)
-				guard_len = 2;
-			refresh();
-		}
-		else if(input == KEY_UP) {    /* 上键增加挡板长度 */
-			if(++guard_len >= 25)
-				guard_len = 25;
-			refresh();
-		}
-	}
+	while(update_status())
+		draw();
 
 	quit_game();
 }
@@ -77,15 +53,17 @@ void init_ball_and_guard()
 	ball.x_dir = 1;
 	ball.symbol = BALL_SYMBOL;
 
-	guard_pos = 36;
+	guard_pos = 28;
 	guard_len = 10;
 	score     = 0;
 }
 
 void draw()
 {
+	clear();
+
 	/* information */
-	mvprintw(0, 5, "Score: 0 \n     Guard operation: four arrow keys");
+	mvprintw(0, 5, "Score: %d\n     Guard operation: four arrow keys", score);
 	mvprintw(2, 5, "-speed:s/S, +speed: k/K");
 
 	standout();
@@ -100,7 +78,55 @@ void draw()
 	/* draw ball */
 	mvaddch(ball.y_pos, ball.x_pos, ball.symbol);
 
+	move(LINES - 1, COLS - 1);
+
 	refresh();
+}
+
+int update_status()
+{
+	int input, dir = 0;
+
+	//play_game();
+
+	switch(getch()) {
+	case 'K':
+		ball.y_ttm--; /* 增加小球在y轴的移动速度 */
+		break;
+	case 'S':
+		ball.y_ttm++; /* 减少小球在y轴的移动速度 */
+		break;
+	case 'k':
+		ball.x_ttm--; /* 增加小球在x轴的移动速度 */
+		break;
+	case 's':
+		ball.x_ttm++; /* 减少小球在x轴的移动速度 */
+		break;
+	case KEY_LEFT:	      /*左移挡板*/
+		dir = -1;
+		change_guard_pos_by(dir);
+		break;
+	case KEY_RIGHT:       /*右移挡板*/
+		dir = 1;
+		change_guard_pos_by(dir);
+		break;
+	case KEY_UP:          /* 上键增加挡板长度 */
+		if(guard_pos + guard_len - 1 > RIGHT_EDGE)
+			guard_len = RIGHT_EDGE + 1 - guard_pos;
+		if(++guard_len >= 25)
+			guard_len = 25;
+		break;
+	case KEY_DOWN:	      /* 下键减短挡板长度 */
+		if(--guard_len <= 2)
+			guard_len = 2;
+		break;
+	case 'q':
+		return FALSE;
+	default:
+		break;
+	}
+
+	return TRUE;
 }
 
 void play_game()
@@ -148,8 +174,6 @@ void ball_move(int signum)
 
 void bounce_or_lose(struct pong_ball *bp)
 {
-	void game_over();
-
 	int guard_left  = guard_pos;
 	int guard_right = guard_pos + guard_len - 1;
 
@@ -170,10 +194,10 @@ void bounce_or_lose(struct pong_ball *bp)
 
 	/* lose */
 	if(bp->y_pos > BOT_ROW)
-		game_over();
+	 	game_over();
 }
 
-void game_over()
+int game_over()
 {
 	char c;
 
@@ -186,16 +210,18 @@ void game_over()
 			clear();
 			init();
 			play_game();
-			break;
+			return TRUE;
 		}
 		else if(c == 'n') {
 			quit_game();
-			break;
+			return TRUE;
 		}
 	}
+
+	return TRUE;
 }
 
-void move_guard(int dir)
+void change_guard_pos_by(int dir)
 {
 	bool can_move = true;
 	int guard_right = guard_pos + guard_len - 1;
@@ -205,14 +231,8 @@ void move_guard(int dir)
 	else if(guard_right == RIGHT_EDGE && dir == 1)
 		can_move = false;
 
-	if(can_move) {
-		mvhline(BOT_ROW + 1, guard_pos, BLANK, RIGHT_EDGE - LEFT_EDGE + 1);
-		standout();
+	if(can_move)
 		guard_pos += dir;
-		mvhline(BOT_ROW + 1, guard_pos, GUARD, guard_len);
-		standend();
-		refresh();
-	}
 }
 
 set_ticker(n_msecs)

@@ -6,7 +6,7 @@
 
 #define BLANK 	     ' '
 #define BALL_SYMBOL  'o'
-#define WALL 	       ' '
+#define WALL 	       '+'
 #define GUARD	       '='
 #define TOP_ROW 	    5
 #define	BOT_ROW 	    20
@@ -39,5 +39,7 @@ void draw();
 void play_game();
 void ball_move(int);
 void quit_game();
-void move_guard(int);
+void change_guard_pos_by(int);
 void bounce_or_lose(struct pong_ball *bp);
+int  update_status();
+int  game_over();
