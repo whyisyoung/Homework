@@ -27,6 +27,9 @@ int c[ maxn ];
 // 	return ans;
 // }
 
+/*
+ * unrecursive version
+ */
 long long single_mod(long long x, long long n) // x^n % MOD
 {
 	long long ans = 1;
@@ -69,7 +72,7 @@ int main()
 
 		if(t & 1)
         	for(int i = 1; i <= n; i++)
-            	printf("%lld\n", (total_sum + MOD - c[i]) % MOD);
+            	printf("%lld\n", (total_sum + MOD - c[i]) % MOD); // You have to add MOD or it fails :(
 		else
 		 	for(int i = 1; i <= n; i++)
 		 		printf("%lld\n", (total_sum + c[i]) % MOD) ;

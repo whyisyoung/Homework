@@ -7,7 +7,7 @@
 //
 
 //
-// What if you are not allowed to use map, how to sort??
+// What if you are not allowed to use map, how to sort?? Use struct instead!
 // Note: eliminate duplication can be done with gcd() constraint
 //
 
@@ -36,11 +36,8 @@ int generate_fractions(int n)
 			if(gcd(i, j) > 1)
 				continue;
 			else {
-				char cstr[15], b[4];
-				itoa(i, cstr, 10);
-				itoa(j, b, 10);
-				strcat(cstr, "/");
-				strcat(cstr, b);
+				char cstr[10];
+				sprintf(cstr, "%d/%d", i, j); // itoa(i, cstr, 10) is deprecated
 				string str(cstr);
 				frac[i*1.0 / j] = str;
 				size++;
